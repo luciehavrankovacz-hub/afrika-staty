@@ -28,9 +28,27 @@
   .sahara{fill:url(#srafy);stroke:#fff;stroke-width:.7;stroke-dasharray:3 2}
   .st{stroke:#fff;stroke-width:.9;stroke-linejoin:round;cursor:pointer;transition:filter .15s}
   .hraje .st:hover{filter:brightness(1.18)}
-  .st.ok{fill:var(--ok)!important}
+  .st.ok{fill:var(--ok)!important;stroke:#fff;stroke-width:2.5}
+  .odhal .st{opacity:.32;transition:opacity .25s}
+  .odhal .st.ok,.odhal .st.tady,.odhal .st.spatne{opacity:1}
+  .odhal .lb{opacity:.35}
+  .odhal .lb.ukaz{opacity:1}
+  .st.tady{stroke:#fff!important;stroke-width:3!important;filter:drop-shadow(0 0 6px #ffd84d) drop-shadow(0 0 14px #ff9f1c)}
+  .kruh{fill:none;stroke:#ffe14d;stroke-width:4;pointer-events:none;transform-box:fill-box;transform-origin:center;animation:kruh 1.3s ease-out infinite}
+  .kruh.k2{animation-delay:.65s}
+  .kruh.kok{stroke:#4ade80}
+  @keyframes kruh{0%{transform:scale(.55);opacity:1}100%{transform:scale(1.5);opacity:0}}
+  .velkyLb{font:900 24px 'Segoe UI',Arial,sans-serif;fill:#fff;text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:#b45309;stroke-width:6px;stroke-linejoin:round;pointer-events:none}
+  .velkyLb.vok{stroke:#15803d}
+  #dalsi{flex:none;display:none;background:var(--gold);color:#1b1300;border:0;border-radius:14px;font:900 20px 'Segoe UI',Arial,sans-serif;padding:10px 22px;cursor:pointer;box-shadow:0 4px 0 #b8902a;white-space:nowrap}
+  #dalsi.on{display:block;animation:vyskoc .25s ease-out}
+  #dalsi:active{transform:translateY(3px);box-shadow:0 1px 0 #b8902a}
+  #otazka span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:1100px){.logo{display:none}}
+  #otazka .ok{color:#4ade80}#otazka .ne{color:#ff9a9a}#otazka b.okb{color:#4ade80}
+  @keyframes vyskoc{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
   .st.spatne{fill:var(--bad)!important}
-  .st.tady{fill:var(--hint)!important;animation:blik .5s ease-in-out infinite alternate}
+  .st.tady{fill:#ff8a00!important;animation:blik .6s ease-in-out infinite alternate}
   @keyframes blik{from{filter:brightness(1)}to{filter:brightness(1.35)}}
   .hit{fill:transparent;cursor:pointer}
   .lb{font-weight:800;fill:#1d2733;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke:#ffffffcc;stroke-width:2.2px;stroke-linejoin:round}
@@ -71,6 +89,7 @@
     .logo{display:none}
     #otazka{order:1;flex-basis:100%}
     #otazka b{font-size:24px}
+    #dalsi{order:2;width:100%}
     .info{width:100%;justify-content:space-between}
     #casnum{font-size:32px;top:10px;right:10px}
     .rezimy{flex-direction:column}
@@ -85,6 +104,7 @@
   <header>
     <div class="logo">🌍 Státy Afriky<small>najdi stát do 5 vteřin</small></div>
     <div id="otazka">Zmáčkni START<b>&nbsp;</b></div>
+    <button id="dalsi">Další otázka ➜</button>
     <div class="info"><span class="pill" id="cislo">0 / 10</span><span class="pill" id="body">⭐ 0</span><button id="zvuk" title="Zvuk">🔊</button></div>
   </header>
   <div id="casbox"><div id="cas"></div></div>
@@ -166,6 +186,7 @@ function postavMapu() {
   el('rect', { class: 'more', x: -50, y: -50, width: 1100, height: 1050 }, svg);
   MAPA.ostatni.forEach(d => el('path', { class: 'ciz', d }, svg));
   const vrstvaSt = el('g', {}, svg), vrstvaHit = el('g', {}, svg), vrstvaLb = el('g', {}, svg);
+  el('g', { id: 'fx' }, svg); // vrstva na zvýraznění odpovědi (nad vším)
   // Somaliland patří k Somálsku
   const soml = MAPA.af.find(x => x.n === 'Somaliland');
   // barvy: sousedi nikdy stejně (hladové barvení)
@@ -188,7 +209,7 @@ function postavMapu() {
     }
     const tvar = el('path', { class: 'st', d, fill: barva[x.n] }, vrstvaSt);
     if (x.n === 'W. Sahara' && MAPA.wsPoly) tvar.setAttribute('clip-path', 'url(#wsPevnina)');
-    const s = { klic: x.n, cz: c[0], tvar, lb: [] };
+    const s = { klic: x.n, cz: c[0], tvar, lb: [], c: x.n === 'W. Sahara' ? [178, 172] : x.c, r: Math.max(x.w, x.h) / 2 };
     // malé státy: větší neviditelná plocha na kliknutí
     if (x.a < 800) el('circle', { class: 'hit', cx: x.c[0], cy: x.c[1], r: x.a < 400 ? 11 : 9 }, vrstvaHit).addEventListener('pointerdown', e => { e.preventDefault(); klik(s); });
     tvar.addEventListener('pointerdown', e => { e.preventDefault(); klik(s); });
@@ -256,7 +277,7 @@ document.querySelectorAll('.rezim').forEach(b => {
 function rekord() { try { return +localStorage.getItem('afrikaRekord_' + rezim) || 0; } catch (e) { return 0; } }
 function ukazRekord() { const r = rekord(); $('rekordUvod').textContent = r ? '🏆 Tvůj rekord (' + (rezim === 'tezky' ? 'bez jmen' : 'jména vidět') + '): ' + r + ' / 10' : ''; }
 function zamichej(a) { for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; }
-function vycisti() { STATY.forEach(s => { s.tvar.classList.remove('ok', 'spatne', 'tady'); s.lb.forEach(l => l.classList.remove('ukaz')); }); }
+function vycisti() { STATY.forEach(s => { s.tvar.classList.remove('ok', 'spatne', 'tady'); s.lb.forEach(l => l.classList.remove('ukaz')); }); svg.classList.remove('odhal'); $('fx').innerHTML = ''; $('dalsi').classList.remove('on'); }
 function nastavRezim() { svg.classList.toggle('skryt', rezim === 'tezky'); }
 
 function zacni() {
@@ -290,26 +311,48 @@ function tik(t) {
   if (zbyva <= 0) return odpoved(null, true);
   raf = requestAnimationFrame(tik);
 }
-function zprava(t) { const z = $('zprava'); z.innerHTML = t; z.classList.add('on'); }
+function zprava(t, jmeno, trida) { $('otazka').innerHTML = '<span class="' + trida + '">' + t + '</span><b' + (trida === 'ok' ? ' class="okb"' : '') + '>' + jmeno + '</b>'; }
 function odpoved(s, vyprselo) {
   if (!ceka) return;
   ceka = false; cancelAnimationFrame(raf); svg.classList.remove('hraje');
   const cil = otazky[i], dobre = s === cil;
-  if (dobre) { body++; cil.tvar.classList.add('ok'); zvukOk(); zprava('✅ Správně! +1 ⭐'); }
+  if (dobre) { body++; cil.tvar.classList.add('ok'); zvukOk(); zprava('✅ Správně! +1 ⭐', cil.cz, 'ok'); }
   else {
     zvukChyba();
     cil.tvar.classList.add('tady');
-    if (s) { s.tvar.classList.add('spatne'); s.lb.forEach(l => l.classList.add('ukaz')); zprava('❌ To je ' + s.cz + '. ' + cil.cz + ' je tady.'); }
-    else zprava('⏰ Čas vypršel! ' + cil.cz + ' je tady.');
+    if (s) { s.tvar.classList.add('spatne'); s.lb.forEach(l => l.classList.add('ukaz')); zprava('❌ Tohle je ' + s.cz + '. Hledali jsme:', cil.cz, 'ne'); }
+    else zprava('⏰ Čas vypršel! Hledali jsme:', cil.cz, 'ne');
   }
   cil.lb.forEach(l => l.classList.add('ukaz'));
+  zvyrazni(cil, dobre, s);
   vysledky.push({ cz: cil.cz, ok: dobre });
   $('body').textContent = '⭐ ' + body;
   $('casnum').textContent = '';
   i++;
-  clearTimeout(casovac);
-  casovac = setTimeout(() => { $('zprava').classList.remove('on'); dalsi(); }, dobre ? 1100 : 2000);
+  // zvýrazněný stát zůstane, dokud hráč nezmáčkne „Další otázka“
+  const b = $('dalsi'); b.textContent = i >= POCET ? 'Vyhodnotit 🎓' : 'Další otázka ➜'; b.classList.add('on');
 }
+// výrazné ukázání odpovědi: ostatní státy ztmavnou, stát svítí, kolem něj pulzuje kruh a nad ním je velký nápis
+function naVrch(s) { if (!s) return; s.tvar.parentNode.appendChild(s.tvar); if (s.klic === 'Morocco') { const ws = STATY.find(x => x.klic === 'W. Sahara'); if (ws) ws.tvar.parentNode.appendChild(ws.tvar); } }
+function zvyrazni(cil, dobre, spatny) {
+  svg.classList.add('odhal');
+  naVrch(spatny); naVrch(cil);
+  const fx = $('fx'); fx.innerHTML = '';
+  const r = Math.max(20, Math.min(cil.r * 1.05, 75)) + 6, [x, y] = cil.c;
+  el('circle', { class: 'kruh' + (dobre ? ' kok' : ''), cx: x, cy: y, r }, fx);
+  el('circle', { class: 'kruh k2' + (dobre ? ' kok' : ''), cx: x, cy: y, r }, fx);
+  const ty = y - r - 14 < 40 ? y + r + 22 : y - r - 12;
+  const pul = (cil.cz.length + 3) * 7.4; // přibližná polovina šířky nápisu, ať nevyjede z mapy
+  const t = el('text', { class: 'velkyLb' + (dobre ? ' vok' : ''), x: Math.max(84 + pul, Math.min(918 - pul, x)), y: ty }, fx);
+  t.textContent = (dobre ? '✅ ' : '👉 ') + cil.cz;
+}
+function dalsiOtazka() {
+  if (ceka || !$('dalsi').classList.contains('on')) return;
+  $('dalsi').classList.remove('on');
+  dalsi();
+}
+$('dalsi').onclick = dalsiOtazka;
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && $('dalsi').classList.contains('on')) { e.preventDefault(); dalsiOtazka(); } });
 function klik(s) { if (ceka) odpoved(s, false); }
 
 function znamka(b) { return b >= 9 ? 1 : b >= 7 ? 2 : b >= 5 ? 3 : b >= 3 ? 4 : 5; }
