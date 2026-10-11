@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="cs" data-verze="5">
+<html lang="cs" data-verze="6">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -285,15 +285,39 @@ document.querySelectorAll('.rezim').forEach(b => {
   b.onclick = () => { rezim = b.dataset.r; document.querySelectorAll('.rezim').forEach(x => x.classList.toggle('vyb', x === b)); try { localStorage.setItem('afrikaRezim', rezim); } catch (e) {} ukazRekord(); };
 });
 function rekord() { try { return +localStorage.getItem('afrikaRekord_' + rezim) || 0; } catch (e) { return 0; } }
-function ukazRekord() { const r = rekord(); $('rekordUvod').textContent = r ? '🏆 Tvůj rekord (' + (rezim === 'tezky' ? 'bez jmen' : 'jména vidět') + '): ' + r + ' / 10' : ''; }
-function zamichej(a) { for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; }
+function ukazRekord() {
+  const r = rekord(), zb = nactiBalicek().length || STATY.length;
+  $('rekordUvod').innerHTML = (r ? '🏆 Tvůj rekord (' + (rezim === 'tezky' ? 'bez jmen' : 'jména vidět') + '): ' + r + ' / 10<br>' : '') +
+    '<span style="color:var(--muted);font-weight:600">🎲 Ještě nepadlo ' + zb + ' z ' + STATY.length + ' států – dokud nepadnou všechny, žádný se nezopakuje</span>';
+}
+// náhodné číslo 0..n-1 (crypto = opravdu náhodné, jinak Math.random)
+function nahoda(n) { try { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; } catch (e) { return Math.floor(Math.random() * n); } }
+function zamichej(a) { for (let k = a.length - 1; k > 0; k--) { const j = nahoda(k + 1); [a[k], a[j]] = [a[j], a[k]]; } return a; }
+// „balíček karet“: státy, které ještě nepadly (pamatuje si to i mezi hrami) -> za 5 her padne všech 50
+let balicekPamet = [];
+function nactiBalicek() {
+  let b = balicekPamet;
+  try { const t = localStorage.getItem('afrikaBalicek'); if (t) b = JSON.parse(t); } catch (e) {}
+  return Array.isArray(b) ? b.filter(k => STATY.some(s => s.klic === k)) : [];
+}
+function ulozBalicek(b) { balicekPamet = b; try { localStorage.setItem('afrikaBalicek', JSON.stringify(b)); } catch (e) {} }
+function vyberOtazky() {
+  let bal = zamichej(nactiBalicek());
+  let vyber = bal.splice(0, POCET);
+  if (vyber.length < POCET) { // balíček došel -> nový zamíchaný ze všech států (bez těch, co už jsou v této hře)
+    bal = zamichej(STATY.map(s => s.klic).filter(k => !vyber.includes(k)));
+    vyber = vyber.concat(bal.splice(0, POCET - vyber.length));
+  }
+  ulozBalicek(bal);
+  return zamichej(vyber).map(k => STATY.find(s => s.klic === k));
+}
 function vycisti() { STATY.forEach(s => { s.tvar.classList.remove('ok', 'spatne', 'tady'); s.lb.forEach(l => l.classList.remove('ukaz')); }); svg.classList.remove('odhal'); $('fx').innerHTML = ''; $('dalsi').classList.remove('on'); }
 function nastavRezim() { svg.classList.toggle('skryt', rezim === 'tezky'); }
 
 function zacni() {
   $('uvod').classList.add('pryc'); $('konec').classList.add('pryc');
   nastavRezim(); vycisti();
-  otazky = zamichej(STATY.slice()).slice(0, POCET); i = 0; body = 0; vysledky = [];
+  otazky = vyberOtazky(); i = 0; body = 0; vysledky = [];
   $('body').textContent = '⭐ 0'; $('cislo').textContent = '0 / 10';
   $('otazka').innerHTML = 'Připrav se…<b>&nbsp;</b>';
   const o = $('okOdpocet'); o.classList.remove('pryc');
