@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="cs" data-verze="7">
+<html lang="cs" data-verze="8">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -38,7 +38,9 @@
   .kruh.k2{animation-delay:.65s}
   .kruh.kok{stroke:#4ade80}
   @keyframes kruh{0%{transform:scale(.55);opacity:1}100%{transform:scale(1.5);opacity:0}}
-  .velkyLb{font:900 24px 'Segoe UI',Arial,sans-serif;fill:#fff;text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:#b45309;stroke-width:6px;stroke-linejoin:round;pointer-events:none}
+  .lb.zakryt{display:none!important}
+  .velkyLb.vne{stroke:#991b1b}
+  .velkyLb{font-weight:900;font-family:'Segoe UI',Arial,sans-serif;fill:#fff;text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:#b45309;stroke-width:6px;stroke-linejoin:round;pointer-events:none}
   .velkyLb.vok{stroke:#15803d}
   #dalsi{flex:none;display:none;background:var(--gold);color:#1b1300;border:0;border-radius:14px;font:900 20px 'Segoe UI',Arial,sans-serif;padding:10px 22px;cursor:pointer;box-shadow:0 4px 0 #b8902a;white-space:nowrap}
   #dalsi.on{display:block;animation:vyskoc .25s ease-out}
@@ -249,7 +251,7 @@ function postavMapu() {
     }
     const t = el('text', { class: 'lb jm' + (ven ? ' ven' : ''), x: pos[0], y: pos[1], 'font-size': fs.toFixed(1) }, vrstvaLb);
     radky.forEach((r, i) => { const ts = el('tspan', { x: pos[0], dy: i === 0 ? (-(radky.length - 1) * 0.55) + 'em' : '1.1em' }, t); ts.textContent = r; });
-    s.lb = [t];
+    s.lb = [t]; s.lpos = pos.slice(); s.radky = radky;
     STATY.push(s);
   });
   // tvar Maroka v datech zasahuje přes Západní Saharu -> Západní Saharu kreslit navrch
@@ -311,7 +313,7 @@ function vyberOtazky() {
   ulozBalicek(bal);
   return zamichej(vyber).map(k => STATY.find(s => s.klic === k));
 }
-function vycisti() { STATY.forEach(s => { s.tvar.classList.remove('ok', 'spatne', 'tady'); s.lb.forEach(l => l.classList.remove('ukaz')); }); svg.classList.remove('odhal'); $('fx').innerHTML = ''; $('dalsi').classList.remove('on'); }
+function vycisti() { STATY.forEach(s => { s.tvar.classList.remove('ok', 'spatne', 'tady'); s.lb.forEach(l => l.classList.remove('ukaz', 'zakryt')); }); svg.classList.remove('odhal'); $('fx').innerHTML = ''; $('dalsi').classList.remove('on'); }
 function nastavRezim() { svg.classList.toggle('skryt', rezim === 'tezky'); }
 
 function zacni() {
@@ -375,10 +377,17 @@ function zvyrazni(cil, dobre, spatny) {
   const r = Math.max(20, Math.min(cil.r * 1.05, 75)) + 6, [x, y] = cil.c;
   el('circle', { class: 'kruh' + (dobre ? ' kok' : ''), cx: x, cy: y, r }, fx);
   el('circle', { class: 'kruh k2' + (dobre ? ' kok' : ''), cx: x, cy: y, r }, fx);
-  const ty = y - r - 14 < 40 ? y + r + 22 : y - r - 12;
-  const pul = (cil.cz.length + 3) * 7.4; // přibližná polovina šířky nápisu, ať nevyjede z mapy
-  const t = el('text', { class: 'velkyLb' + (dobre ? ' vok' : ''), x: Math.max(84 + pul, Math.min(918 - pul, x)), y: ty }, fx);
-  t.textContent = (dobre ? '✅ ' : '👉 ') + cil.cz;
+  // velký nápis přímo na státu (na místě jeho popisku), malý popisek se schová – ať nikdy není nad sousedem
+  velkyNapis(cil, (dobre ? '✅ ' : '') , dobre ? 'velkyLb vok' : 'velkyLb', 22);
+  if (spatny && !dobre) velkyNapis(spatny, '❌ ', 'velkyLb vne', 17);
+}
+function velkyNapis(s, pred, trida, fs) {
+  s.lb.forEach(l => l.classList.add('zakryt'));
+  const radky = s.radky.slice(); radky[0] = pred + radky[0];
+  const sir = Math.max(...radky.map(r => r.length)) * fs * 0.3; // přibližná polovina šířky
+  const x = Math.max(80 + sir, Math.min(922 - sir, s.lpos[0]));
+  const t = el('text', { class: trida, x, y: s.lpos[1], 'font-size': fs }, $('fx'));
+  radky.forEach((r, k) => { const ts = el('tspan', { x, dy: k === 0 ? (-(radky.length - 1) * 0.55) + 'em' : '1.1em' }, t); ts.textContent = r; });
 }
 function dalsiOtazka() {
   if (ceka || !$('dalsi').classList.contains('on')) return;
